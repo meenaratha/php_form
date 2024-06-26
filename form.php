@@ -1,48 +1,54 @@
 <?php
 include('dbconnection.php');
+$msg = ""; // Initialize $msg
 
-if(isset($_POST['submit'])){
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $mobile = $_POST['mobile'];
-    $location = $_POST['location'];
-
-    // Validate input
-    if(empty($name) || empty($email) || empty($mobile) || empty($location)) {
-        echo "<script>alert('All fields are required.')</script>";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        echo "<script>alert('Invalid email format.')</script>";
+if(isset($_POST['name']) && isset($_POST['email']) && isset($_POST['mobile']) && isset($_POST['location'])){
+	$name = mysqli_real_escape_string($con, $_POST['name']);
+	$email = mysqli_real_escape_string($con, $_POST['email']);
+	$mobile = mysqli_real_escape_string($con, $_POST['mobile']);
+	$location = mysqli_real_escape_string($con, $_POST['location']);
+	
+	mysqli_query($con, "INSERT INTO appointment(name, email, mobile, location) VALUES('$name', '$email', '$mobile', '$location')");
+	$msg = "Thank you";
+	
+	$html = "<table>
+				<tr><td>Name</td><td>$name</td></tr>
+				<tr><td>Email</td><td>$email</td></tr>
+				<tr><td>Mobile</td><td>$mobile</td></tr>
+				<tr><td>Location</td><td>$location</td></tr>
+			</table>";
+	
+	include('smtp/PHPMailerAutoload.php');
+	$mail = new PHPMailer(true);
+	$mail->isSMTP();
+	$mail->Host = "smtp.gmail.com";
+	$mail->Port = 587;
+	$mail->SMTPSecure = "tls";
+	$mail->SMTPAuth = true;
+	$mail->Username = "poovisoft@gmail.com";
+	$mail->Password = "Poovi@1997";
+	$mail->SetFrom("poovisoft@gmail.com");
+	$mail->addAddress("poovisoft@gmail.com");
+	$mail->IsHTML(true);
+	$mail->Subject = "New Contact Us";
+	$mail->Body = $html;
+	$mail->SMTPOptions = array(
+		'ssl' => array(
+			'verify_peer' => false,
+			'verify_peer_name' => false,
+			'allow_self_signed' => false
+		)
+	);
+  $mail->SMTPDebug = 2; // Enable verbose debug output
+	try {
+    if($mail->send()){
+        echo $msg;
     } else {
-        // Prepare and bind
-        $stmt = $con->prepare("INSERT INTO appointment (name, email, mobile, location) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $name, $email, $mobile, $location);
-
-        // Execute the statement
-        if ($stmt->execute()) {
-            echo "<script>alert('Data inserted successfully.')</script>";
-            
-            // Prepare the email
-            $to = $email;
-            $subject = "Appointment Confirmation";
-            $message = "Hello $name,\n\nYour appointment details are as follows:\n\nName: $name\nEmail: $email\nMobile: $mobile\nLocation: $location\n\nThank you!";
-            $headers = "From: meenatchipkr@gmail.com";
-
-            // Send the email
-            if(mail($to, $subject, $message, $headers)) {
-                echo "<script>alert('Data inserted successfully and email sent.')</script>";
-            } else {
-                echo "<script>alert('Data inserted successfully but email not sent.')</script>";
-            
-        }
-
-
-        } else {
-            echo "<script>alert('Error inserting data.')</script>";
-        }
-
-        // Close the statement
-        $stmt->close();
+        echo "Mail could not be sent.";
     }
+} catch (phpmailerException $e) {
+    echo "Mailer Error: " . $mail->ErrorInfo;
+}
 }
 ?>
 
@@ -51,73 +57,61 @@ if(isset($_POST['submit'])){
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>php form</title>
+    <title>PHP Form</title>
     <link rel="stylesheet" href="style.css">
-     <!-- Font Awesome 6.5.2 CDN -->
+    <!-- Font Awesome 6.5.2 CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha384-ZJfY7Pf7XJcQp/4UuMcUarj4m8EPVcL3EyE4v2YI2md4LClG0C3RfhczV6q9vznA" crossorigin="anonymous">
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-</head>
-<body>
-   
-<div class="container">
-  <form method="post" action="">
-    <div class="row">
-      <h4>Get In Touch</h4>
-      <div class="input-group input-group-icon">
-        <input type="text" name="name" id="name" placeholder="Full Name"/>
-        <div class="input-icon"><svg width="20px" height="20px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path fill="#FFD43B" d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg></div>
-        <span class="error"></span>
+    <div class="container">
+        <form method="post" action="" id="frmcontact">
+            <div class="row">
+                <h4>Get In Touch</h4>
+                <div class="input-group input-group-icon">
+                    <input type="text" name="name" id="name" placeholder="Full Name" required />
+                    <div class="input-icon"><i class="fa fa-user"></i></div>
+                    <span class="error"></span>
+                </div>
+                <div class="input-group input-group-icon">
+                    <input type="email" name="email" id="email" placeholder="Email Address" required />
+                    <div class="input-icon"><i class="fa fa-envelope"></i></div>
+                    <span class="error"></span>
+                </div>
+                <div class="input-group input-group-icon">
+                    <input type="number" name="mobile" id="mobile" placeholder="Mobile No" required />
+                    <div class="input-icon"><i class="fa fa-phone"></i></div>
+                    <span class="error"></span>
+                </div>
+                <div class="input-group input-group-icon">
+                    <input type="text" name="location" id="location" placeholder="Location" required />
+                    <div class="input-icon"><i class="fa fa-map-marker"></i></div>
+                    <span class="error"></span>
+                </div>
+            </div>
+            <div class="form-button">
+                <button type="submit" name="submit" id="submit">Submit</button>
+                <span style="color:red;" id="msg"><?php echo $msg; ?></span>
+            </div>
+        </form>
     </div>
-     
-      <div class="input-group input-group-icon">
-        <input type="email" name="email" id="email" placeholder="Email Adress"/>
-        <div class="input-icon"><svg width="20px" height="20px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path fill="#FFD43B" d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg></div>
-        <span class="error"></span>  
-    </div>
-      <div class="input-group input-group-icon">
-        <input type="number" name="mobile" id="mobile" placeholder="Mobile No"/>
-        <div class="input-icon"><svg width="20px" height="20px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path fill="#FFD43B" d="M16 64C16 28.7 44.7 0 80 0H304c35.3 0 64 28.7 64 64V448c0 35.3-28.7 64-64 64H80c-35.3 0-64-28.7-64-64V64zM224 448a32 32 0 1 0 -64 0 32 32 0 1 0 64 0zM304 64H80V384H304V64z"/></svg></div>
-        <span class="error"></span>  
-    </div>
-      <div class="input-group input-group-icon">
-        <input type="text" name="location" id="location" placeholder="Location"/>
-        <div class="input-icon"><svg width="20px" height="20px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path fill="#FFD43B" d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></div>
-        <span class="error"></span>  
-    </div>
-    </div>
-    <!-- <div class="row">
-      <div class="col-half">
-        <h4>Date of Birth</h4>
-        <div class="input-group">
-          <div class="col-third">
-            <input type="text" placeholder="DD"/>
-          </div>
-          <div class="col-third">
-            <input type="text" placeholder="MM"/>
-          </div>
-          <div class="col-third">
-            <input type="text" placeholder="YYYY"/>
-          </div>
-        </div>
-      </div>
-      <div class="col-half">
-        <h4>Gender</h4>
-        <div class="input-group">
-          <input id="gender-male" type="radio" name="gender" value="male"/>
-          <label for="gender-male">Male</label>
-          <input id="gender-female" type="radio" name="gender" value="female"/>
-          <label for="gender-female">Female</label>
-        </div>
-      </div>
-    </div> -->
-    <div class="form-button">
-       <button type="submit" name="submit">Submit</button> 
-        </div>
-  </form>
-</div>
 
-
-
+    <script>
+        jQuery('#frmcontact').on('submit', function(e) {
+            e.preventDefault();
+            jQuery('#submit').html('Please wait').attr('disabled', true);
+            jQuery.ajax({
+                url: 'form.php',
+                type: 'post',
+                data: jQuery('#frmcontact').serialize(),
+                success: function(result) {
+                    jQuery('#msg').html(result);
+                    jQuery('#submit').html('Submit').attr('disabled', false);
+                    jQuery('#frmcontact')[0].reset();
+                }
+            });
+        });
+    </script>
 </body>
 </html>
